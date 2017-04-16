@@ -1,8 +1,22 @@
+MODULE sensor(street)
+VAR
+  state: {on, off};
+
+ASSIGN
+  next(state) := case
+    state = on & street = g: {on, off};
+    state = on & street = r: on;
+    TRUE: state;
+  esac;
+
+
 MODULE main
 VAR
-  car_in_box : boolean;
-  street1 : {g, r};
-  street2 : {g, r};
+  car_in_box: boolean;
+  street1: {g, r};
+  street2: {g, r};
+  sensor1: sensor(street1);
+  sensor2: sensor(street2);
 
 ASSIGN
   init (car_in_box) := FALSE;
@@ -10,26 +24,29 @@ ASSIGN
   init (street2) := r;
 
   next (car_in_box) := case
-    street1 = g & street2 = r & 
+    car_in_box & (street1 != r | street2 != r): {TRUE, FALSE};
     TRUE: car_in_box;
   esac;
 
 TRANS
   (street1 = g & next(street1) = r) |
-  (street2 = g & next(street2) = r) |
-  (car_in_box & (street1 != r | street2 != r) & next(car_in_box) = {TRUE, FALSE}) 
+  (street2 = g & next(street2) = r)
+
+DEFINE 
+  both_red := (street1 = r & street2 = r);
 
 -- At most one traffic light in any direction is ever green
 LTLSPEC
-  G( (street1 = g & street2 = r) | (street1 = r & street2 = g) | (street1 = r & street2 = r) )
+  G( (street1 = g & street2 = r) | (street1 = r & street2 = g) | both_red )
 
 -- It takes one transition for cars to clear the intersection
 LTLSPEC
-  G( car_in_box & !(street1 = r & street2 = r) )
+  G( car_in_box & !both_red & (next(car_in_box) = TRUE | next(car_in_box) = FALSE) )
 
+-- Any car waiting in front of a light will eventually get a green light
 LTLSPEC
-  G( F( street1 = g | street2 = g ) ) 
-
+  G( sensor1.state = on -> F street1 = g ) &
+  G( sensor2.state = on -> F street2 = g )
 
 FAIRNESS
   street1 = g

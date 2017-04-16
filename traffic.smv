@@ -1,0 +1,37 @@
+MODULE main
+VAR
+  car_in_box : boolean;
+  street1 : {g, r};
+  street2 : {g, r};
+
+ASSIGN
+  init (car_in_box) := FALSE;
+  init (street1) := r;
+  init (street2) := r;
+
+  next (car_in_box) := case
+    street1 = g & street2 = r & 
+    TRUE: car_in_box;
+  esac;
+
+TRANS
+  (street1 = g & next(street1) = r) |
+  (street2 = g & next(street2) = r) |
+  (car_in_box & (street1 != r | street2 != r) & next(car_in_box) = {TRUE, FALSE}) 
+
+-- At most one traffic light in any direction is ever green
+LTLSPEC
+  G( (street1 = g & street2 = r) | (street1 = r & street2 = g) | (street1 = r & street2 = r) )
+
+-- It takes one transition for cars to clear the intersection
+LTLSPEC
+  G( car_in_box & !(street1 = r & street2 = r) )
+
+LTLSPEC
+  G( F( street1 = g | street2 = g ) ) 
+
+
+FAIRNESS
+  street1 = g
+FAIRNESS
+  street2 = g
